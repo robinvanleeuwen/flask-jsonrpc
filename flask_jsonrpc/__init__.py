@@ -172,7 +172,8 @@ def _site_api(site):
         filename = f"/tmp/{str(time.time())}"
 
         with open(f"{filename}_request.json", "w") as file:
-            file.write(json.dumps(json.loads(extract_raw_data_request(request)), indent=4, sort_keys=True))
+            request_string = extract_raw_data_request(request).replace("\'","\"").replace("None", "\"\"").replace("True","true").replace("False","false")
+            file.write(json.dumps(json.loads(request_string), indent=4, sort_keys=True))
         with open(f"{filename}_response.json", "w") as file:
             response_string = str(response_obj).replace("\'","\"").replace("None", "\"\"").replace("True","true").replace("False","false")
             file.write(json.dumps(json.loads(response_string), indent=4, sort_keys=True))
