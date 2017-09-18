@@ -164,6 +164,18 @@ def _site_api(site):
         if isinstance(response_obj, Response):
            return response_obj, response_obj.status_code
         is_batch = type(response_obj) is list
+
+        # Write all responses to a jsonfile in the /tmp directory
+
+        import time, json
+
+        filename = f"/tmp/{str(time.time())}"
+
+        with open(f"{filename}_request.json", "w") as file:
+            file.write(json.dumps(json.loads(extract_raw_data_request(request)), indent=4, sort_keys=True))
+        with open(f"{filename}_response.json", "w") as file:
+            file.write(json.dumps(json.loads(str(response_obj).replace("\'","\"").replace("None", "\"\"")), indent=4, sort_keys=True))
+
         if current_app.config['DEBUG']:
             logging.debug('request: %s', extract_raw_data_request(request))
             logging.debug('response: %s, %s', status_code, response_obj)
