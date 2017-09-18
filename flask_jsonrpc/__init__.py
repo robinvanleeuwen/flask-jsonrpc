@@ -167,14 +167,15 @@ def _site_api(site):
 
         # Write all responses to a jsonfile in the /tmp directory
 
-        import time, json
+        import time, json, pprint
 
         filename = f"/tmp/{str(time.time())}"
 
         with open(f"{filename}_request.json", "w") as file:
             file.write(json.dumps(json.loads(extract_raw_data_request(request)), indent=4, sort_keys=True))
         with open(f"{filename}_response.json", "w") as file:
-            file.write(json.dumps(json.loads(str(response_obj).replace("\'","\"").replace("None", "\"\"")), indent=4, sort_keys=True))
+            response_string = str(response_obj).replace("\'","\"").replace("None", "\"\"").replace("True","true").replace("False","false")
+            file.write(json.dumps(json.loads(response_string), indent=4, sort_keys=True))
 
         if current_app.config['DEBUG']:
             logging.debug('request: %s', extract_raw_data_request(request))
