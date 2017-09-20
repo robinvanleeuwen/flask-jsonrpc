@@ -160,27 +160,45 @@ def _inject_args(sig, types):
 
 def _site_api(site):
     def wrapper(method=''):
+
         response_obj, status_code = site.dispatch(request, method)
         if isinstance(response_obj, Response):
            return response_obj, response_obj.status_code
         is_batch = type(response_obj) is list
 
         # Write all responses to a jsonfile in the /tmp directory
-
-        import time, json, pprint
+        import time, json, ast
 
         filename = f"/tmp/{str(time.time())}"
 
         with open(f"{filename}_request.json", "w") as file:
-            request_string = extract_raw_data_request(request).replace("\'","\"").replace("None", "\"\"").replace("True","true").replace("False","false")
-            file.write(json.dumps(json.loads(request_string), indent=4, sort_keys=True))
+            request_string = extract_raw_data_request(request).\
+                replace("\'","\"").\
+                replace("None", "\"\"").\
+                replace("True","true").\
+                replace("False","false")
+
+            # Wo don't need to log empty requests (OPTIONS/CORS)
+            if request_string != "":
+                file.write(json.dumps(json.loads(request_string), indent=4, sort_keys=True))
+
         with open(f"{filename}_response.json", "w") as file:
-            response_string = str(response_obj).replace("\'","\"").replace("None", "\"\"").replace("True","true").replace("False","false")
-            file.write(json.dumps(json.loads(response_string), indent=4, sort_keys=True))
+
+            # It is possible that we receive a an error message with stacktrace
+            # from an external library (eg Flask), This stacktrace is possibly
+            # not correctly quoted for json. So we need to replace double quotes
+            # for single quotes.
+
+            if "error" in response_obj and "stack" in response_obj["error"]["message"]:
+                response_obj["error"]["message"]["stack"].replace("\"","'")
+
+            # Log the response object
+            file.write(json.dumps(response_obj, indent=4, sort_keys=True))
 
         if current_app.config['DEBUG']:
             logging.debug('request: %s', extract_raw_data_request(request))
             logging.debug('response: %s, %s', status_code, response_obj)
+
         return jsonify_status_code(status_code, response_obj, is_batch=is_batch), status_code
     return wrapper
 

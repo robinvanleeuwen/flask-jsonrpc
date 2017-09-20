@@ -75,7 +75,7 @@ class Error(Exception):
 
         if current_app.config['DEBUG']:
             import sys, traceback
-            error['stack'] = traceback.format_exc()
+            error['stack'] = str(traceback.format_exc()).replace("\"","'")
             error['executable'] = sys.executable
 
         return error
