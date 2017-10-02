@@ -158,6 +158,26 @@ def _inject_args(sig, types):
         sig = '{0}({1})'.format(sig, ', '.join(types))
     return sig
 
+
+
+def cleanup_non_serializable_fields(field_name, field):
+
+    import datetime
+
+    if type(field) is str:
+        return field
+    elif type(field) is None:
+        return None
+
+    elif type(field) is datetime.datetime:
+        print(f"Stringifying: {field_name} -> {field} = str({field}) -> type={type(str(field))}")
+        return str(field)
+
+    else:
+        return field
+
+
+
 def _site_api(site):
     def wrapper(method=''):
 
@@ -168,19 +188,27 @@ def _site_api(site):
 
         # Write all responses to a jsonfile in the /tmp directory
         import time, json, ast
+        from copy import copy, deepcopy
 
         filename = f"/tmp/{str(time.time())}"
 
         with open(f"{filename}_request.json", "w") as file:
             request_string = extract_raw_data_request(request).\
                 replace("\'","\"").\
-                replace("None", "\"\"").\
+                replace("None", "\'\'").\
                 replace("True","true").\
-                replace("False","false")
+                replace("False","false").\
+                replace("\"\"\"\"", "\"\'\'\"")
 
             # Wo don't need to log empty requests (OPTIONS/CORS)
             if request_string != "":
-                file.write(json.dumps(json.loads(request_string), indent=4, sort_keys=True))
+
+                json_object = json.loads(request_string)
+
+                # for field_name, field in json_object.items():
+                #     cleanup_non_serializable_fields(field_name, field)
+
+                file.write(json.dumps(json_object, indent=4, sort_keys=True))
 
         with open(f"{filename}_response.json", "w") as file:
 
@@ -193,6 +221,18 @@ def _site_api(site):
                 response_obj["error"]["message"]["stack"].replace("\"","'")
 
             # Log the response object
+            if "result" in response_obj and type(response_obj["result"]) is dict:
+                for field_name, field in response_obj.items():
+                    field = cleanup_non_serializable_fields(field_name, field)
+
+            elif "result" in response_obj and type(response_obj["result"]) is list:
+                for index, list_item in enumerate(copy(response_obj["result"])):
+                    for field_name, field in copy(list_item).items():
+                        response_obj["result"][index][field_name] = cleanup_non_serializable_fields(field_name, field)
+
+
+            print(response_obj)
+
             file.write(json.dumps(response_obj, indent=4, sort_keys=True))
 
         if current_app.config['DEBUG']:
