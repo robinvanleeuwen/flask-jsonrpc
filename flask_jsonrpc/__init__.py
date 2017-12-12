@@ -170,9 +170,7 @@ def cleanup_non_serializable_fields(field_name, field):
         return None
 
     elif type(field) is datetime.datetime:
-        print(f"Stringifying: {field_name} -> {field} = str({field}) -> type={type(str(field))}")
         return str(field)
-
     else:
         return field
 
@@ -221,6 +219,8 @@ def _site_api(site):
                 response_obj["error"]["message"]["stack"].replace("\"","'")
 
             # Log the response object
+
+            # Cleanup all Non-Serializable fields (cast them to string)
             if "result" in response_obj and type(response_obj["result"]) is dict:
                 for field_name, field in response_obj.items():
                     field = cleanup_non_serializable_fields(field_name, field)
@@ -229,9 +229,6 @@ def _site_api(site):
                 for index, list_item in enumerate(copy(response_obj["result"])):
                     for field_name, field in copy(list_item).items():
                         response_obj["result"][index][field_name] = cleanup_non_serializable_fields(field_name, field)
-
-
-            print(response_obj)
 
             file.write(json.dumps(response_obj, indent=4, sort_keys=True))
 
